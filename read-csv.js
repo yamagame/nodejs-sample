@@ -1,4 +1,4 @@
-const { load } = require("./csv-parser");
+const { load } = require("./libs/csv-parser");
 
 console.log(load("./data.csv"));
 /*出力結果
