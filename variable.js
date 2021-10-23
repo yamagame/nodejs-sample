@@ -49,7 +49,7 @@ console.log(a, b);
 100 200
 */
 
-// 閑居変数
+// 環境変数
 console.log(process.env.USER);
 /*出力例
 user1
@@ -57,6 +57,6 @@ user1
 
 // コマンドライン引数
 console.log(process.argv[0]);
-/*出力k例
+/*出力例
 /usr/bin/ndoe
 */
