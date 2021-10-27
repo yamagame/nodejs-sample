@@ -25,7 +25,7 @@ console.log(order);
 ]
 */
 
-console.log(order.reverse());
+console.log(order.slice().reverse());
 /*出力結果
 [
   9, 8, 7, 6, 5,
