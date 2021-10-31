@@ -263,7 +263,7 @@ const operator = (offset, getCellText) => {
   const getCell = (x, y) => {
     try {
       return getCellText(x, y);
-    } catch {
+    } catch (err) {
       return "";
     }
   };
@@ -271,11 +271,8 @@ const operator = (offset, getCellText) => {
     switch (operator) {
       case "CELL": {
         const p = parseRange(args[0]);
-        if (p.p1.absolute) {
-          return getCell(p.p1.x, p.p1.y);
-        } else {
-          return getCell(offset.x + p.p1.x, offset.y + p.p1.y);
-        }
+        const { x, y } = calcPosition(p.p1, offset);
+        return getCell(x, y);
       }
       case "range":
         return value(args[0].range, offset, getCell);
@@ -303,14 +300,21 @@ const position = pos => {
   const nineCode = "9".charCodeAt(0);
   let x = 0;
   let y = 0;
-  let absolute = false;
+  let step = 0;
+  let absoluteX = false;
+  let absoluteY = false;
   for (i = 0; i < str.length; i++) {
     const c = str.charCodeAt(i);
     if (str[i] === "$") {
-      absolute = true;
+      if (step === 0) {
+        absoluteX = true;
+      } else {
+        absoluteY = true;
+      }
     } else if (c >= aCode && c <= zCode) {
       x *= zCode - aCode + 1;
       x += c - aCode;
+      step = 1;
     } else if (c >= zeroCode && c <= nineCode) {
       y *= nineCode - zeroCode + 1;
       y += c - zeroCode;
@@ -318,7 +322,7 @@ const position = pos => {
       throw new Error(`invalid range character code: ${str[i]}`);
     }
   }
-  return { x, y, absolute };
+  return { x, y, absolute: { x: absoluteX, y: absoluteY } };
 };
 
 const parseRange = range => {
@@ -333,12 +337,22 @@ const parseRange = range => {
   return { p1: position(w[0]) };
 };
 
-const value = (range, origin, callback) => {
-  const p1 = range.p1 ? range.p1 : { x: 0, y: 0 };
-  if (p1.absolute) {
-    return callback(p1.x, p1.y);
+const calcPosition = (pos, offset) => {
+  let x = pos.x;
+  let y = pos.y;
+  if (!pos.absolute.x) {
+    x += offset.x;
   }
-  return callback(origin.x + p1.x, origin.y + p1.y);
+  if (!pos.absolute.y) {
+    y += offset.y;
+  }
+  return { x, y };
+};
+
+const value = (range, offset, callback) => {
+  const p1 = range.p1 ? range.p1 : { x: 0, y: 0 };
+  const { x, y } = calcPosition(p1, offset);
+  return callback(x, y);
 };
 
 module.exports.token = token;
@@ -393,9 +407,9 @@ if (require.main === module) {
     assert(execMacro(offset, table, `(A1+A0) == (A3+A2)`), true,`(A1+A0) == (A3+A2) : true`);
     assert(execMacro(offset, table, `(A1+A0) != (A3+A2)`), false, `(A1+A0) != (A3+A2) : false`);
     assert(execMacro(offset, table, `("A" == A1) && ("B" == B1)`), true, `("A" == A1) && ("B" == B1) : true`);
-    assert(execMacro({ x: 1, y: 3}, table, `CELL("$A0")`), 1, `CELL("$A0") : 1`);
+    assert(execMacro({ x: 1, y: 3}, table, `CELL("$A$0")`), 1, `CELL("$A$0") : 1`);
     assert(execMacro({ x: 1, y: 3}, table, `CELL("A0")`), "B", `CELL("A0") : B`);
-    assert(execMacro({ x: 1, y: 3}, table, `$A0`), 1, `$A0 : 1`);
+    assert(execMacro({ x: 1, y: 3}, table, `$A$0`), 1, `$A$0 : 1`);
     assert(execMacro({ x: 1, y: 3}, table, `A0`), "B", `A0 : B`);
   }
 }
