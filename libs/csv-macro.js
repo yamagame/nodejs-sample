@@ -9,6 +9,7 @@ const TOKEN = {
   close: "close",
   separator: "separator",
   number: "number",
+  space: "space",
   word: "word",
   eq: "eq",
   not: "not",
@@ -235,7 +236,14 @@ const expression = function (token) {
   return expr();
 };
 
-const executor = function (node, callback) {
+const executor = function (cell, node, range, callback) {
+  const { x, y } = cell;
+  const { p1, p2 } = range;
+  if (p1 && p2) {
+    if (p1.x > x || p1.y > y || p2.x < x || p2.y < y) return false;
+  } else if (p1) {
+    if (p1.x > x || p1.y > y) return false;
+  }
   const exec = node => {
     switch (node[0]) {
       case "func": {
@@ -303,7 +311,7 @@ const position = pos => {
   let step = 0;
   let absoluteX = false;
   let absoluteY = false;
-  for (i = 0; i < str.length; i++) {
+  for (let i = 0; i < str.length; i++) {
     const c = str.charCodeAt(i);
     if (str[i] === "$") {
       if (step === 0) {
@@ -361,6 +369,10 @@ module.exports.executor = executor;
 module.exports.operator = operator;
 module.exports.value = value;
 module.exports.range = parseRange;
+module.exports.compile = macro => {
+  const step1 = token(macro);
+  return expression(step1);
+};
 
 if (require.main === module) {
   const assert = (a, v, message) => {
@@ -391,13 +403,18 @@ if (require.main === module) {
     const getCellText = (x, y) => {
       return table[y][x];
     };
-    const step3 = executor(step2, operator(offset, getCellText));
+    const step3 = executor(
+      { x: 0, y: 0 },
+      step2,
+      parseRange(""),
+      operator(offset, getCellText)
+    );
     // console.dir(step3, { depth: null });
     return step3;
   };
   if (process.argv[2]) {
     execMacro(offset, table, process.argv[2]);
-    return;
+    process.exit(0);
   }
   // prettier-ignore
   {
